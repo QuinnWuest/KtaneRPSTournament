@@ -1,45 +1,54 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
 using UnityEngine;
+using Rnd = UnityEngine.Random;
 
-public class RPST : MonoBehaviour {
+public class RPST : MonoBehaviour
+{
+
+    public KMAudio AudioHandler;                                                // audioHandler
+    public AudioClip[] Audio = new AudioClip[21];                               // declaring audio 
+    public KMSelectable[] cylinders = new KMSelectable[8];                      // declaring selectable cylinders    
 
     public Sprite[] sprites = new Sprite[21];                                   // loading all the sprites
-    public int[] contestantNumbers = new int[8];                                // declaring their corresponding numbers
     public SpriteRenderer[] presentSprites = new SpriteRenderer[9];             // declaring the active sprites
-    public int[] semiFin = new int[4];                                          // semifinalist's numbers
-    public int[] fin = new int[2];                                              // finalist's numbers
-    public int win = new int();                                                 // winner's number
-    public KMAudio audiohandler;                                                // audioHandler
-    public AudioClip[] audio = new AudioClip[21];                               // declaring audio 
-    public KMSelectable[] cylinders = new KMSelectable[8];                      // declaring selectable cylinders    
-    public bool ModuleSolved;                                                   // to track if the module is solved
+
     public TextMesh[] quaterHoriz = new TextMesh[8];                            // 
     public TextMesh[] quaterVert = new TextMesh[8];                             //
     public TextMesh[] semifinals = new TextMesh[4];                             //
     public TextMesh[] finals = new TextMesh[2];                                 //
-    public bool[] isAWinQuaterfinalists = new bool[8];                          //
-    public bool[] isAWinSemifinalists = new bool[4];                            //
-    public bool[] isAWinFinalists = new bool[2];                                //
+
+    private int[] contestantNumbers = new int[8];                                // declaring their corresponding numbers
+    private int[] semiFin = new int[4];                                          // semifinalist's numbers
+    private int[] fin = new int[2];                                              // finalist's numbers
+    private int win = new int();                                                 // winner's number
+    private bool ModuleSolved;                                                   // to track if the module is solved
+    private bool[] isAWinQuaterfinalists = new bool[8];                          //
+    private bool[] isAWinSemifinalists = new bool[4];                            //
+    private bool[] isAWinFinalists = new bool[2];                                //
     private double[] textScale = new[] { 8, 8, 10.8, 11 };                      //
-    static int ModuleIdCounter = 1;                                             // onward: for logging
-    int ModuleId;
+    private static int ModuleIdCounter = 1;                                             // onward: for logging
+    private int ModuleId;
+
     void Awake()
     {
         ModuleId = ModuleIdCounter++;
     }
 
-    void Start () {
+    void Start()
+    {
 
-        for(int i = 0; i < 8; i++)
+        for (int i = 0; i < 8; i++)
         {
             int i1 = i;
             cylinders[i1].OnInteract += delegate { pressCylinder(i1); return false; };
         }
 
         contestantNumbers = GenerateUniqueRandomArray();
-        string contestantsForDebug = ArrayToString(contestantNumbers);
-        Debug.LogFormat("[RPS Tournament #{0}] Generated contestants: {1}", ModuleId, contestantsForDebug);
+        Debug.LogFormat("[RPS Tournament #{0}] Generated contestants: {1}", ModuleId, contestantNumbers.Select(i => Audio[i - 1].name).Join(", "));
 
         for (int i = 0; i < 8; i++)                                             // initializing sprites
         {
@@ -48,7 +57,7 @@ public class RPST : MonoBehaviour {
 
         for (int i = 0; i < 8; i = i + 2)                                       // calculating semifinalists
         {
-            semiFin[i / 2] = pvp(contestantNumbers[i], contestantNumbers[i+1]);
+            semiFin[i / 2] = pvp(contestantNumbers[i], contestantNumbers[i + 1]);
             if (semiFin[i / 2] == contestantNumbers[i])
             {
                 isAWinQuaterfinalists[i] = true;
@@ -88,9 +97,9 @@ public class RPST : MonoBehaviour {
             isAWinFinalists[1] = true;
         }
 
-        Debug.LogFormat("[RPS Tournament #{0}] Semifinalists: {1}, {2}, {3}, {4}", ModuleId, semiFin[0], semiFin[1], semiFin[2], semiFin[3]);
-        Debug.LogFormat("[RPS Tournament #{0}] Finalists: {1}, {2}", ModuleId, fin[0], fin[1]);
-        Debug.LogFormat("[RPS Tournament #{0}] Winner: {1}", ModuleId, win);
+        Debug.LogFormat("[RPS Tournament #{0}] Semifinalists: {1}", ModuleId, semiFin.Select(i => Audio[i - 1].name).Join(", "));
+        Debug.LogFormat("[RPS Tournament #{0}] Finalists: {1}", ModuleId, fin.Select(i => Audio[i - 1].name).Join(", "));
+        Debug.LogFormat("[RPS Tournament #{0}] Winner: {1}", ModuleId, Audio[win - 1].name);
 
         lineColouring(quaterHoriz, isAWinQuaterfinalists);
         lineColouring(quaterVert, isAWinQuaterfinalists);
@@ -104,7 +113,7 @@ public class RPST : MonoBehaviour {
         if (ModuleSolved)
             return;
 
-        if(win == contestantNumbers[cylinderNumber])
+        if (win == contestantNumbers[cylinderNumber])
         {
             onSolve(win);
         }
@@ -114,7 +123,7 @@ public class RPST : MonoBehaviour {
         }
     }
 
-    public int pvp (int contestant1, int contestant2) // winner of a single game
+    public int pvp(int contestant1, int contestant2) // winner of a single game
     {
         if (((contestant2 - contestant1 < 11) && (contestant2 - contestant1 > 0)) || (contestant2 - contestant1 < -10))
             return contestant1;
@@ -124,22 +133,7 @@ public class RPST : MonoBehaviour {
 
     public static int[] GenerateUniqueRandomArray() //array with 8 unique numbers [1-21]
     {
-        int[] result = new int[8];
-        bool[] used = new bool[21];
-
-        for (int i = 0; i < 8; i++)
-        {
-            int randomNumber;
-            do
-            {
-                randomNumber = Random.Range(1, 22);
-            }
-            while (used[randomNumber - 1]);
-
-            used[randomNumber - 1] = true;
-            result[i] = randomNumber;
-        }
-        return result;
+        return Enumerable.Range(1, 21).ToArray().Shuffle().Take(8).ToArray();
     }
 
     public string ArrayToString(int[] array)                                   //making a string with numbers from the array (for debug)
@@ -154,7 +148,7 @@ public class RPST : MonoBehaviour {
 
     public void lineColouring(TextMesh[] lines, bool[] isAWin)
     {
-        for(int i = 0; i < lines.Length; i++)
+        for (int i = 0; i < lines.Length; i++)
         {
             lines[i].color = isAWin[i] ? Color.green : Color.red;
         }
@@ -163,15 +157,15 @@ public class RPST : MonoBehaviour {
     public void onStrike(int pressedNumber)
     {
         GetComponent<KMBombModule>().HandleStrike();
-        Debug.LogFormat("[RPS Tournament #{0}] Wrong! You pressed {1}", ModuleId, pressedNumber);
+        Debug.LogFormat("[RPS Tournament #{0}] Wrong! You pressed {1}.", ModuleId, Audio[pressedNumber - 1].name);
     }
 
     public void onSolve(int win)
     {
         presentSprites[8].sprite = sprites[win - 1];                           //initializing winner sprite upon solve
-        audiohandler.PlaySoundAtTransform(audio[win - 1].name, transform);         //function to play correspong sound
+        AudioHandler.PlaySoundAtTransform(Audio[win - 1].name, transform);         //function to play correspong sound
         ModuleSolved = true;
-        Debug.LogFormat("[RPS Tournament #{0}] Correctly pressed the winner ({1})", ModuleId, win);
+        Debug.LogFormat("[RPS Tournament #{0}] Correctly pressed the winner {1}.", ModuleId, Audio[win - 1].name);
         GetComponent<KMBombModule>().HandlePass();
         StartCoroutine(linesAnimation());
     }
@@ -217,25 +211,26 @@ public class RPST : MonoBehaviour {
     }
 
 #pragma warning disable 414
-    private readonly string TwitchHelpMessage = @"Use !{0} <button position> (1-8: TTL, TBL, TTR, TBR, BTL, BBL, BTR, BBR (T/B/L/R = top/bottom/left/right)>";
+    private readonly string TwitchHelpMessage = @"Use !{0} <button position> [Press the button at that position.] | Positions: TTL, TBL, TTR, TBR, BTL, BBL, BTR, BBR (Top/Bottom half, Top/Bottom Half, Left/Right Half)";
 #pragma warning restore 414
 
-    IEnumerator ProcessTwitchCommand(string Command)
+    IEnumerator ProcessTwitchCommand(string command)
     {
-        if (!Command.RegexMatch("[12345678]"))
-        {
-            yield return "sendtochaterror Сommand is not valid.";
-        }
+        command = command.Trim().ToUpperInvariant();
+        var m = Regex.Match(command, @"^\s*(?<pos>ttl|tbl|ttr|tbr|btl|bbl|btr|bbr)\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        if (!m.Success)
+            yield break;
 
-        int answeredNumber = Command[0] - '1';
-        cylinders[answeredNumber].OnInteract();
         yield return null;
+        var strs = new string[] { "TTL", "TBL", "TTR", "TBR", "BTL", "BBL", "BTR", "BBR" };
+        int ix = Array.IndexOf(strs, m.Groups["pos"].Value);
+        cylinders[ix].OnInteract();
     }
 
     IEnumerator TwitchHandleForcedSolve()
     {
         yield return null;
-        onSolve(win);
-        yield return null;
+        cylinders[Array.IndexOf(contestantNumbers, win)].OnInteract();
+        yield break;
     }
 }
